@@ -1,0 +1,194 @@
+name: Build
+
+on: push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_REPOSITORY: https://github.com/OpenMW/vcpkg.git
+  VCPKG_REVISION: dbbbfe8f58195ba49f3141dbba7a4f4b35e92052
+  GPG_KEY: 8D5838140D294CE3C17ED6AE31FC2142D139BD97
+
+jobs:
+  static:
+    strategy:
+      fail-fast: true
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - working-directory: 'C:/vcpkg'
+      run: git remote add openmw ${{ env.VCPKG_REPOSITORY }}
+
+    - working-directory: 'C:/vcpkg'
+      run: git fetch openmw
+
+    - working-directory: 'C:/vcpkg'
+      run: git checkout ${{ env.VCPKG_REVISION }}
+
+    - working-directory: 'C:/vcpkg'
+      run: ./bootstrap-vcpkg.bat -disableMetrics
+
+    - name: Install vcpkg packages
+      run: >
+        vcpkg install --triplet x64-windows-static
+        boost-geometry
+        boost-iostreams
+        boost-locale
+        boost-program-options
+        bullet3[double-precision,multithreading]
+        ffmpeg
+        freetype
+        icu
+        luajit
+        lz4
+        mygui
+        openal-soft
+        openmw-osg
+        sdl2
+
+    - name: Export installed vcpkg packages
+      run: >
+        vcpkg export
+        --x-all-installed
+        --7zip
+        --output-dir ${{ github.workspace }}
+        --output vcpkg-x64-windows-static-${{ github.sha }}
+
+    - name: Store exported vcpkg packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: vcpkg-x64-windows-static-${{ github.sha }}
+        path: ${{ github.workspace }}/vcpkg-x64-windows-static-${{ github.sha }}.7z
+
+  dynamic:
+    strategy:
+      fail-fast: true
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - working-directory: 'C:/vcpkg'
+      run: git remote add openmw ${{ env.VCPKG_REPOSITORY }}
+
+    - working-directory: 'C:/vcpkg'
+      run: git fetch openmw
+
+    - working-directory: 'C:/vcpkg'
+      run: git checkout ${{ env.VCPKG_REVISION }}
+
+    - working-directory: 'C:/vcpkg'
+      run: ./bootstrap-vcpkg.bat -disableMetrics
+
+    - name: Install vcpkg packages
+      run: >
+        vcpkg install --triplet x64-windows
+        boost-geometry
+        boost-iostreams
+        boost-locale
+        boost-program-options
+        bullet3[double-precision,multithreading]
+        ffmpeg
+        freetype
+        icu
+        luajit
+        lz4
+        mygui
+        openal-soft
+        openmw-osg
+        sdl2
+
+    - name: Export installed vcpkg packages
+      run: >
+        vcpkg export
+        --x-all-installed
+        --7zip
+        --output-dir ${{ github.workspace }}
+        --output vcpkg-x64-windows-${{ github.sha }}
+
+    - name: Store exported vcpkg packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: vcpkg-x64-windows-${{ github.sha }}
+        path: ${{ github.workspace }}/vcpkg-x64-windows-${{ github.sha }}.7z
+
+    - name: Setup ssh-agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Import GPG key
+      uses: crazy-max/ghaction-import-gpg@v6
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASSPHRASE }}
+
+    - name: Configure ssh known hosts for gitlab.com
+      run: cat gitlab_known_hosts >> ~/.ssh/known_hosts
+
+    - name: Configure git
+      run: |
+        git config --global user.email 'openmw-deps-build@users.noreply.github.com'
+        git config --global user.name 'openmw-deps-build'
+        git config --global user.signkey ${{ env.GPG_KEY }}
+        git config --global commit.gpgsign true
+
+    - name: Clone openmw-deps repository
+      env:
+        GIT_LFS_SKIP_SMUDGE: 1
+      run: git clone git@gitlab.com:OpenMW/openmw-deps.git
+
+    - name: Move exported vcpkg packages to openmw-deps repository
+      run: mv vcpkg-x64-windows-${{ github.sha }}.7z openmw-deps/windows/
+
+    - name: Generate commit message
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      working-directory: ${{ github.workspace }}/openmw-deps
+      run: |
+        echo Add windows vcpkg packages built at ${{ github.sha }} > commit_message.txt
+        echo >> commit_message.txt
+        printf 'Generated by ' >> commit_message.txt
+        gh run --repo ${{ github.repository }} view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.name == "${{ github.job }}") | .url' >> commit_message.txt
+        echo >> commit_message.txt
+
+    - name: Commit exported vcpkg packages
+      working-directory: ${{ github.workspace }}/openmw-deps
+      run: |
+        git checkout -b vcpkg-x64-windows-${{ github.sha }}
+        git add windows/vcpkg-x64-windows-${{ github.sha }}.7z
+        git commit -F commit_message.txt
+        git verify-commit HEAD
+
+    - name: Push exported vcpkg packages to gitlab
+      if: github.ref == 'refs/heads/master'
+      working-directory: ${{ github.workspace }}/openmw-deps
+      run: git push origin vcpkg-x64-windows-${{ github.sha }}
+
+    - name: Store exported vcpkg packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: vcpkg-x64-windows-${{ github.sha }}
+        path: ${{ github.workspace }}/openmw-deps/windows/vcpkg-x64-windows-${{ github.sha }}.7z
