@@ -188,9 +188,3 @@ jobs:
       if: github.ref == 'refs/heads/master'
       working-directory: ${{ github.workspace }}/openmw-deps
       run: git push origin vcpkg-x64-windows-${{ github.sha }}
-
-    - name: Store exported vcpkg packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: vcpkg-x64-windows-${{ github.sha }}
-        path: ${{ github.workspace }}/openmw-deps/windows/vcpkg-x64-windows-${{ github.sha }}.7z
