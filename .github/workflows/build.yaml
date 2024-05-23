@@ -60,6 +60,24 @@ jobs:
         openmw-osg
         sdl2
 
+    - name: Move pdb files
+      working-directory: 'C:/vcpkg'
+      run: |
+        robocopy installed pdb/installed *.pdb /S /MOVE
+        if ($lastexitcode -lt 8) {
+          $global:LASTEXITCODE = $null
+        }
+
+    - name: Archive pdb files
+      working-directory: 'C:/vcpkg/pdb'
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-windows-static-pdb-${{ github.sha }}.7z" installed
+
+    - name: Store archived pdb files
+      uses: actions/upload-artifact@v4
+      with:
+        name: vcpkg-x64-windows-static-pdb-${{ github.sha }}
+        path: ${{ github.workspace }}/vcpkg-x64-windows-static-pdb-${{ github.sha }}.7z
+
     - name: Export installed vcpkg packages
       run: >
         vcpkg export
@@ -119,6 +137,24 @@ jobs:
         openal-soft
         openmw-osg
         sdl2
+
+    - name: Move pdb files
+      working-directory: 'C:/vcpkg'
+      run: |
+        robocopy installed pdb/installed *.pdb /S /MOVE
+        if ($lastexitcode -lt 8) {
+          $global:LASTEXITCODE = $null
+        }
+
+    - name: Archive pdb files
+      working-directory: 'C:/vcpkg/pdb'
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-windows-pdb-${{ github.sha }}.7z" installed
+
+    - name: Store archived pdb files
+      uses: actions/upload-artifact@v4
+      with:
+        name: vcpkg-x64-windows-pdb-${{ github.sha }}
+        path: ${{ github.workspace }}/vcpkg-x64-windows-pdb-${{ github.sha }}.7z
 
     - name: Export installed vcpkg packages
       run: >
@@ -191,6 +227,9 @@ jobs:
     - name: Move exported vcpkg packages to openmw-deps repository
       run: mv vcpkg-x64-windows-${{ github.sha }}.7z openmw-deps/windows/
 
+    - name: Move pdb files archive to openmw-deps repository
+      run: mv vcpkg-x64-windows-pdb-${{ github.sha }}.7z openmw-deps/windows/
+
     - name: Generate commit message
       shell: bash
       env:
@@ -208,6 +247,7 @@ jobs:
       run: |
         git checkout -b vcpkg-x64-windows-${{ github.sha }}
         git add windows/vcpkg-x64-windows-${{ github.sha }}.7z
+        git add windows/vcpkg-x64-windows-pdb-${{ github.sha }}.7z
         git commit -F commit_message.txt
 
     - name: Verify commit to openmw-deps repository
