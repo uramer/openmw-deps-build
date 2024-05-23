@@ -12,7 +12,6 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_REPOSITORY: https://github.com/OpenMW/vcpkg.git
   VCPKG_REVISION: dbbbfe8f58195ba49f3141dbba7a4f4b35e92052
-  GPG_KEY: 8D5838140D294CE3C17ED6AE31FC2142D139BD97
 
 jobs:
   static:
@@ -136,32 +135,58 @@ jobs:
         path: ${{ github.workspace }}/vcpkg-x64-windows-${{ github.sha }}.7z
 
     - name: Setup ssh-agent
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      if: ${{ env.SSH_PRIVATE_KEY != '' }}
       uses: webfactory/ssh-agent@v0.9.0
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Import GPG key
+      id: import_gpg
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        GPG_PRIVATE_KEY_PASSPHRASE: ${{ secrets.GPG_PRIVATE_KEY_PASSPHRASE }}
+      if: ${{ env.GPG_PRIVATE_KEY != '' && env.GPG_PRIVATE_KEY_PASSPHRASE != '' }}
       uses: crazy-max/ghaction-import-gpg@v6
       with:
         gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
         passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASSPHRASE }}
 
     - name: Configure ssh known hosts for gitlab.com
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      if: ${{ env.SSH_PRIVATE_KEY != '' }}
       run: cat gitlab_known_hosts >> ~/.ssh/known_hosts
 
-    - name: Configure git
+    - name: Configure git user
       run: |
         git config --global user.email 'openmw-deps-build@users.noreply.github.com'
         git config --global user.name 'openmw-deps-build'
-        git config --global user.signkey ${{ env.GPG_KEY }}
+
+    - name: Configure git sign key
+      if: ${{ steps.import_gpg.outputs.fingerprint != '' }}
+      run: |
+        git config --global user.signkey ${{ steps.import_gpg.outputs.fingerprint }}
         git config --global commit.gpgsign true
 
-    - name: Clone openmw-deps repository
+    - name: Clone openmw-deps repository via SSH
       env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         GIT_LFS_SKIP_SMUDGE: 1
         # see https://github.com/git-lfs/git-lfs/issues/5749
         GIT_CLONE_PROTECTION_ACTIVE: false
+      if: ${{ env.SSH_PRIVATE_KEY != '' }}
       run: git clone git@gitlab.com:OpenMW/openmw-deps.git
+
+    - name: Clone openmw-deps repository via HTTPS
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        GIT_LFS_SKIP_SMUDGE: 1
+        # see https://github.com/git-lfs/git-lfs/issues/5749
+        GIT_CLONE_PROTECTION_ACTIVE: false
+      if: ${{ env.SSH_PRIVATE_KEY == '' }}
+      run: git clone https://gitlab.com/OpenMW/openmw-deps.git
 
     - name: Move exported vcpkg packages to openmw-deps repository
       run: mv vcpkg-x64-windows-${{ github.sha }}.7z openmw-deps/windows/
@@ -184,9 +209,18 @@ jobs:
         git checkout -b vcpkg-x64-windows-${{ github.sha }}
         git add windows/vcpkg-x64-windows-${{ github.sha }}.7z
         git commit -F commit_message.txt
-        git verify-commit HEAD
+
+    - name: Verify commit to openmw-deps repository
+      if: ${{ steps.import_gpg.outputs.fingerprint != '' }}
+      working-directory: ${{ github.workspace }}/openmw-deps
+      run: git verify-commit HEAD
 
     - name: Push exported vcpkg packages to gitlab
-      if: github.ref == 'refs/heads/master'
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Make sure only signed commits are pushed
+      if: ${{ vars.PUSH_URL != '' && env.SSH_PRIVATE_KEY != '' && steps.import_gpg.outputs.fingerprint != '' }}
       working-directory: ${{ github.workspace }}/openmw-deps
-      run: git push origin vcpkg-x64-windows-${{ github.sha }}
+      run: |
+        git remote set-url --push origin "${{ vars.PUSH_URL }}"
+        git push origin vcpkg-x64-windows-${{ github.sha }}
