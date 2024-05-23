@@ -157,6 +157,8 @@ jobs:
     - name: Clone openmw-deps repository
       env:
         GIT_LFS_SKIP_SMUDGE: 1
+        # see https://github.com/git-lfs/git-lfs/issues/5749
+        GIT_CLONE_PROTECTION_ACTIVE: false
       run: git clone git@gitlab.com:OpenMW/openmw-deps.git
 
     - name: Move exported vcpkg packages to openmw-deps repository
