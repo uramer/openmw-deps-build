@@ -66,8 +66,16 @@ jobs:
         openmw-osg
         sdl2
 
+    - name: Export installed vcpkg packages
+      run: >
+        vcpkg export
+        --x-all-installed
+        --raw
+        --output-dir ${{ github.workspace }}
+        --output intermediate
+
     - name: Move pdb files
-      working-directory: 'C:/vcpkg'
+      working-directory: '${{ github.workspace }}/intermediate'
       run: |
         robocopy installed pdb/installed *.pdb /S /MOVE
         if ($lastexitcode -lt 8) {
@@ -75,7 +83,7 @@ jobs:
         }
 
     - name: Archive pdb files
-      working-directory: 'C:/vcpkg/pdb'
+      working-directory: '${{ github.workspace }}/intermediate/pdb'
       run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-static-pdb-${{ github.sha }}.7z" installed
 
     - name: Store archived pdb files
@@ -84,13 +92,9 @@ jobs:
         name: vcpkg-x64-${{ matrix.image }}-static-pdb-${{ github.sha }}
         path: ${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-static-pdb-${{ github.sha }}.7z
 
-    - name: Export installed vcpkg packages
-      run: >
-        vcpkg export
-        --x-all-installed
-        --7zip
-        --output-dir ${{ github.workspace }}
-        --output vcpkg-x64-${{ matrix.image }}-static-${{ github.sha }}
+    - name: Archive everything else
+      working-directory: '${{ github.workspace }}/intermediate'
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-static-${{ github.sha }}.7z" *
 
     - name: Store exported vcpkg packages
       uses: actions/upload-artifact@v4
@@ -150,8 +154,16 @@ jobs:
         openmw-osg
         sdl2
 
+    - name: Export installed vcpkg packages
+      run: >
+        vcpkg export
+        --x-all-installed
+        --raw
+        --output-dir ${{ github.workspace }}
+        --output intermediate
+
     - name: Move pdb files
-      working-directory: 'C:/vcpkg'
+      working-directory: '${{ github.workspace }}/intermediate'
       run: |
         robocopy installed pdb/installed *.pdb /S /MOVE
         if ($lastexitcode -lt 8) {
@@ -159,7 +171,7 @@ jobs:
         }
 
     - name: Archive pdb files
-      working-directory: 'C:/vcpkg/pdb'
+      working-directory: '${{ github.workspace }}/intermediate/pdb'
       run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-pdb-${{ github.sha }}.7z" installed
 
     - name: Store archived pdb files
@@ -168,13 +180,9 @@ jobs:
         name: vcpkg-x64-${{ matrix.image }}-pdb-${{ github.sha }}
         path: ${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-pdb-${{ github.sha }}.7z
 
-    - name: Export installed vcpkg packages
-      run: >
-        vcpkg export
-        --x-all-installed
-        --7zip
-        --output-dir ${{ github.workspace }}
-        --output vcpkg-x64-${{ matrix.image }}-${{ github.sha }}
+    - name: Archive everything else
+      working-directory: '${{ github.workspace }}/intermediate'
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-${{ github.sha }}.7z" *
 
     - name: Store exported vcpkg packages
       uses: actions/upload-artifact@v4
