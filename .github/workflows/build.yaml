@@ -94,7 +94,7 @@ jobs:
 
     - name: Archive everything else
       working-directory: '${{ github.workspace }}/intermediate'
-      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-static-${{ github.sha }}.7z" *
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-static-${{ github.sha }}.7z" * -x!pdb
 
     - name: Store exported vcpkg packages
       uses: actions/upload-artifact@v4
@@ -182,7 +182,7 @@ jobs:
 
     - name: Archive everything else
       working-directory: '${{ github.workspace }}/intermediate'
-      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-${{ github.sha }}.7z" *
+      run: 7z a "${{ github.workspace }}/vcpkg-x64-${{ matrix.image }}-${{ github.sha }}.7z" * -x!pdb
 
     - name: Store exported vcpkg packages
       uses: actions/upload-artifact@v4
