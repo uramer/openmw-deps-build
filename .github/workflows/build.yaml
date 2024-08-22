@@ -53,7 +53,6 @@ jobs:
         vcpkg install --triplet x64-windows-static
         boost-geometry
         boost-iostreams
-        boost-locale
         boost-program-options
         bullet3[double-precision,multithreading]
         ffmpeg
@@ -141,7 +140,6 @@ jobs:
         vcpkg install --triplet x64-windows
         boost-geometry
         boost-iostreams
-        boost-locale
         boost-program-options
         bullet3[double-precision,multithreading]
         ffmpeg
