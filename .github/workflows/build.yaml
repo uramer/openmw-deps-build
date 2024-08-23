@@ -191,7 +191,6 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' }}
-      working-directory: ${{ github.workspace }}/openmw-deps/windows
       run: .\Store-Symbols.ps1 ${{ github.workspace }}\intermediate
 
     - name: Upload symbols to symbol server
@@ -200,7 +199,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: eu-west-3
       if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' }}
-      working-directory: ${{ github.workspace }}/openmw-deps/windows/SymStore
+      working-directory: ${{ github.workspace }}/SymStore
       run: aws --endpoint-url https://rgw.ctrl-c.liu.se s3 sync --size-only --exclude * --include *.dl_ --include *.pd_ . s3://openmw-sym
 
   push-dynamic:
