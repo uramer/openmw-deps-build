@@ -16,9 +16,12 @@ jobs:
       matrix:
         image:
         - windows-2019
-        - windows-2022
+        - windows-2022        
+        architecture:
+        - x64-windows
+        - arm64-windows
 
-    name: static-${{ matrix.image }}
+    name: static-${{ matrix.image }}-${{ matrix.architecture }}
 
     runs-on: ${{ matrix.image }}
 
@@ -46,7 +49,7 @@ jobs:
 
     - name: Install vcpkg packages
       run: >
-        vcpkg install --triplet x64-windows-static
+        vcpkg install --triplet ${{ matrix.architecture }}-static --allow-unsupported
         boost-geometry
         boost-iostreams
         boost-program-options
@@ -104,8 +107,11 @@ jobs:
         image:
         - windows-2019
         - windows-2022
+        architecture:
+        - x64-windows
+        - arm64-windows
 
-    name: dynamic-${{ matrix.image }}
+    name: dynamic-${{ matrix.image }}-${{ matrix.architecture }}
 
     runs-on: ${{ matrix.image }}
 
@@ -133,7 +139,7 @@ jobs:
 
     - name: Install vcpkg packages
       run: >
-        vcpkg install --triplet x64-windows
+        vcpkg install --triplet ${{ matrix.architecture }} --allow-unsupported
         boost-geometry
         boost-iostreams
         boost-program-options
