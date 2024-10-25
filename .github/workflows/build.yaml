@@ -138,6 +138,7 @@ jobs:
       run: ./bootstrap-vcpkg.bat -disableMetrics
 
     - name: Install vcpkg packages
+      continue-on-error: true
       run: >
         vcpkg install --triplet ${{ matrix.architecture }} --allow-unsupported
         boost-geometry
@@ -153,6 +154,13 @@ jobs:
         openal-soft
         openmw-osg
         sdl2
+
+    - name: Upload luajit build logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: luajit-logs
+        path:  C:\vcpkg\buildtrees\luajit\*.log
+        include-hidden-files: true
 
     - name: Export installed vcpkg packages
       run: >
