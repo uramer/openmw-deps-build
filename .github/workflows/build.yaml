@@ -6,8 +6,8 @@ on:
 
 env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-  VCPKG_REPOSITORY: https://github.com/OpenMW/vcpkg.git
-  VCPKG_REVISION: ab5f50f1a7b54a6f4d6239677cba9d730e6ab152
+  VCPKG_REPOSITORY: https://github.com/uramer/vcpkg.git
+  VCPKG_REVISION: 5cc14f13a7eab5ac3209ee0bab714db0715b7e11
 
 jobs:
   static:
